@@ -1,0 +1,1 @@
+/home/wesley/Scripts/Rust/Term\ Project/markdown/target/debug/markdown: /home/wesley/Scripts/Rust/Term\ Project/markdown/build.rs /home/wesley/Scripts/Rust/Term\ Project/markdown/src/main.rs /home/wesley/Scripts/Rust/Term\ Project/markdown/target/debug/build/markdown-fb3fc63c6499ffc8/out/markdown.rs

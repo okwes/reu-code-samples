@@ -1,0 +1,19 @@
+[package]
+name = "markdown"
+version = "0.1.0"
+edition = "2021"
+build = "build.rs" # LALRPOP preprocessing
+
+# The generated code depends on lalrpop-util.
+#
+# The generated tokenizer depends on the regex crate.
+#
+# (If you write your own tokenizer, or already have the regex
+# crate, you can skip this dependency.)
+[dependencies]
+lalrpop-util = { version = "^0.19", features = ["lexer"] }
+regex = "~1.7.3"
+
+# Add a build-time dependency on the lalrpop library:
+[build-dependencies]
+lalrpop = "0.19.9"

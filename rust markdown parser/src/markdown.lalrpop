@@ -1,0 +1,84 @@
+// Wesley and Mikas
+// April 2023
+// CSCI 324
+// Grammar for markdown parser
+
+// For the errors provided in main.rs
+use lalrpop_util::ParseError;
+use super::Errors;
+
+// Start of Grammar
+grammar;
+
+// again for the external errors in our main.rs
+extern {
+    type Error = Errors;
+}
+
+// The pub makes this the starting symbol
+pub Document: String = {
+    <d:Html_Body> => format!("<!DOCTYPE html>\n<html>\n<head>\n<meta charset=\"UTF-8\">\n</head>\n<body>\n{d}\n</body>\n</html>")
+}
+Html_Body: String = {
+    <s:Formated_Text><r:Out_Line_Command><d:Html_Body> => format!("<p>\n{s}\n</p>{r}{d}"),
+    <r:Out_Line_Command><d:Html_Body> => format!("{r}{d}"),
+    <s:Formated_Text> => format!("<p>\n{s}\n</p>"),
+    () => "".to_string()
+}
+Out_Line_Command: String = {
+    <c:Out_Of_Line_Command><p: Optional_Params> =>? match c.as_str() {
+        "\\\\par" => Ok("".to_string()),
+        "\\\\section" => Ok(format!("<h1>{p}</h1>\n")),
+        "\\\\subsection"  => Ok(format!("<h2>{p}</h2>\n")),
+         error => Err(ParseError::User {error: Errors::UnknownCommand(error.to_string())}),
+    }
+}
+// non empty, with no styles
+Text_String: String = {
+    <w:Word><s:Text_String> => format!("{w} {s}"),
+    <w:Word> => w,
+}
+//possible empty with commands. formatted to prevent text_streams from being next to each other
+// as that could be ambiguous, also we can not have empties here as otherwise, the document could be ambiguous
+Formated_Text: String = {
+    <s:Text_String><r:Command><cs:Formated_Text> => format!("{s} {r} {cs}"),
+    <r:Command><cs:Formated_Text> => format!("{r} {cs}"),
+    <s:Text_String><r:Command> => format!("{s} {r}"),
+    <Text_String>,
+    <Command>,
+}
+Command: String = {
+    "\\{" => "{".to_string(),
+    "\\}" => "}".to_string(),
+    "\\\\" => "\\".to_string(),
+    <c:In_Line_Command> <p: Optional_Params> =>? {
+        let latex: String = "
+        <span class=\"texhtml\" style=\"font-family: &#39;CMU Serif&#39;, cmr10, LMRoman10-Regular, &#39;Latin Modern Math&#39;, 
+        &#39;Nimbus Roman No9 L&#39;, &#39;Times New Roman&#39;, Times, serif;\">L<span style=\"text-transform: uppercase; font-size: 0.75em; 
+        vertical-align: 0.25em; margin-left: -0.36em; margin-right: -0.15em; line-height: 1ex;\">a</span>T<span style=\"text-transform: uppercase; 
+        vertical-align: -0.25em; margin-left: -0.1667em; margin-right: -0.125em; line-height: 1ex;\">e</span>X</span>".to_string();
+
+        match c.as_str() {
+            "\\textbf" => Ok(format!("<strong>{p}</strong>")),
+            "\\textit" => Ok(format!("<em>{p}</em>")),
+            "\\latex"  => Ok(latex),
+            "\\n" => Ok("<br>".to_string()),
+            "\\\\" => Ok("\\".to_string()),
+            error => Err(ParseError::User {error: Errors::UnknownCommand(error.to_string())}),
+        }
+    },
+}
+Optional_Params: String = { 
+    "{"<cs:Formated_Text> "}" => cs,
+    "{}" => "".to_string(),
+    () => "".to_string(),
+}
+
+// Regex for the tokenizer
+
+// Most charecters except < > \, we don't handel them which we need to in html so for now they are forbiden
+Word: String = <s:r#"[\w\p{Emoji}!@#/$&%\^*\(\)=:;'"_—\+`~\|,\.\?\-\[\]]*"#> => s.to_string();
+// \alphanumeric+emoji
+In_Line_Command: String = <s:r#"\\[\w\p{Emoji}]+"#> => s.to_string();
+// \\alphanumeric+emoji
+Out_Of_Line_Command: String = <s:r#"\\\\[\w\p{Emoji}]+"#> => s.to_string();
